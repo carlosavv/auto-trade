@@ -22,11 +22,14 @@ def main():
 	# Get the currency's specific ID
 	# specificID = get_SpecificAccount(auth_client,currency[:3])
 	# currentPrice = []
-	while checkPrice == True:
+	j = 0
+	while j < 3:
 		currentPrice,price_mat = get_CurrentPrice(auth_client,currency,period)
 		time.sleep(1)
 		print(price_mat)
-		
+		# for i in range(0,len(price_mat)):
+		# 	print(price_mat[i][4])
+		j += 1
 	
 		
 main()
