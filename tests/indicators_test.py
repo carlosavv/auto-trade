@@ -10,4 +10,6 @@ def computeRSI(price_data,N = 14):
 	price_data - array with closing price data
 
 	'''
+
+	
 	

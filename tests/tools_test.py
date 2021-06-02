@@ -1,6 +1,9 @@
 import numpy as np 
 import time
 
+class Tools(object):
+	def __init__(self, )
+'''
 def get_SpecificAccount(auth_client,cur):
 	'''
 	params: auth_client - coinbase API client
@@ -28,3 +31,4 @@ def get_CurrentPrice(auth_client,currency,period):
 	currentPrice = latestData['price']
 	# print(str(currency) + " price =",currentPrice)
 	return float(currentPrice),closing_price_array
+'''
