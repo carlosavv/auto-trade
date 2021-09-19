@@ -2,7 +2,7 @@ import websocket
 import json
 import dateutil.parser
 import time
-
+import numpy as np
 
 class Tick(object):
     def __init__(self):
@@ -12,14 +12,10 @@ class Tick(object):
 
 class WebSocketClient(object):
     def __init__(self, url, request):
-
+        self.url = url
         self.timeProcessed = {}
         self.candlesticks = []
         self.request = request
-
-        self.ws = websocket.WebSocketApp(
-            url, on_open=self.on_open, on_message=self.on_message
-        )
 
     def on_open(self, ws):
         print("Websocket connection is opened")
@@ -31,19 +27,19 @@ class WebSocketClient(object):
 
         tick.current = json.loads(message)
         tick.previous = tick.current
-        print("===== Received tick ====")
+        # print("===== Received tick ====")
         # print("{} @ {}".format(tick.current["time"], tick.current["price"]))
         tick_time = dateutil.parser.parse(tick.current["time"])
         timestamp = tick_time.strftime("%m/%d/%Y %H:%M")
 
         if timestamp not in self.timeProcessed:
-            print("Starting new candlestick")
+            # print("Starting new candlestick")
             self.timeProcessed[timestamp] = True
             if len(self.candlesticks) > 0:
                 self.candlesticks[-1]["close"] = tick.previous["price"]
             self.candlesticks.append(
                 {
-                    "minute": timestamp,
+                    "time": timestamp,
                     "open": tick.current["price"],
                     "high": tick.current["price"],
                     "low": tick.current["price"],
@@ -59,10 +55,28 @@ class WebSocketClient(object):
             elif tick.current["price"] < next_tick["low"]:
                 next_tick["low"] = tick.current["price"]
 
-            print("=== Candlesticks ===")
-            for candle in self.candlesticks:
-                print(candle)
+            # print("=== Candlesticks ===")
+            # for candle in self.candlesticks:
+                # print(candle)
+    
+    def on_error(self, ws, msg):
+        print("Websocket error:", msg)
 
+    def get_candlesticks(self):
+        return self.candlesticks
+
+    def on_close(self, ws):
+        print("=== Websocket Connection is now closed!")
+    
+    def start_feed(self):
+        self.ws = websocket.WebSocketApp(
+            self.url, on_open=self.on_open, on_message=self.on_message, on_close=self.on_close
+        )
+        
+        try:
+            self.ws.run_forever()
+        except KeyboardInterrupt:
+            self.ws.close()
 
 def main():
 
@@ -73,12 +87,11 @@ def main():
         "channels": [{"name": "ticker", "product_ids": ["BTC-USD"]}],
     }
     client = WebSocketClient(socket, subscribeMessage)
-    try:
 
-        client.ws.run_forever()
-        time.sleep(1)
-    except KeyboardInterrupt:
-        client.ws.close()
+    client.start_feed()
+    np.savetxt("test.txt",client.get_candlesticks(),fmt='%s')
+        
+
 
 
 if __name__ == "__main__":
