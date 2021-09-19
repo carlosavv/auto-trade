@@ -4,6 +4,7 @@ import dateutil.parser
 import time
 import numpy as np
 
+
 class Tick(object):
     def __init__(self):
         self.current = None
@@ -57,8 +58,8 @@ class WebSocketClient(object):
 
             # print("=== Candlesticks ===")
             # for candle in self.candlesticks:
-                # print(candle)
-    
+            # print(candle)
+
     def on_error(self, ws, msg):
         print("Websocket error:", msg)
 
@@ -66,17 +67,21 @@ class WebSocketClient(object):
         return self.candlesticks
 
     def on_close(self, ws):
-        print("=== Websocket Connection is now closed!")
-    
+        print("=== Websocket Connection is now closed! ===")
+
     def start_feed(self):
         self.ws = websocket.WebSocketApp(
-            self.url, on_open=self.on_open, on_message=self.on_message, on_close=self.on_close
+            self.url,
+            on_open=self.on_open,
+            on_message=self.on_message,
+            on_close=self.on_close,
         )
-        
+
         try:
             self.ws.run_forever()
         except KeyboardInterrupt:
             self.ws.close()
+
 
 def main():
 
@@ -89,9 +94,8 @@ def main():
     client = WebSocketClient(socket, subscribeMessage)
 
     client.start_feed()
-    np.savetxt("test.txt",client.get_candlesticks(),fmt='%s')
-        
-
+    time.sleep(1)
+    np.savetxt("test.txt", client.get_candlesticks(), fmt="%s")
 
 
 if __name__ == "__main__":
