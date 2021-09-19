@@ -2,7 +2,7 @@ import time
 import cbpro
 import sys
 
-
+auth_client = cbpro.WebsocketClient
 def getSpecificAccount(auth_client, currency):
 
 	'''
@@ -12,6 +12,7 @@ def getSpecificAccount(auth_client, currency):
 
 	'''
 	x = auth_client.get_accounts()
+	print(x)
 	for account in x:
 		if account['currency'] == currency:
 			return account['id']
@@ -49,6 +50,7 @@ def getCurrentPrice(auth_client, currency, period):
 
 		except:
 			print('error')
+
 def main():
 
 	keys = []
