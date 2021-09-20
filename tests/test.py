@@ -1,55 +1,106 @@
-# import threading
-from WSFeed import WSclient
+import websocket
+import json
+import dateutil.parser
 import time
-import cbpro
-
-# def get_price_array(client):
-
-# def main():
-# 	client = WSclient(products=['BTC-USD'], channels=['ticker'])
-# 	client.start()
-# 	while True:
-
-# 		if client.price_value != None:
-# 			print("price = ", client.price_value)
-# 			print("time = ", client.timestamp)			
-# 		time.sleep(1)
-# 	client.close()
-# import PyMongo and connect to a local, running Mongo instance
-
-import cbpro, time
-class myWebsocketClient(cbpro.WebsocketClient):
-    def on_open(self):
-        self.url = "wss://ws-feed.pro.coinbase.com/"
-        self.products = ["LTC-USD"]
-        self.message_count = 0
-        print("Lets count the messages!")
-    def on_message(self, msg):
-        self.message_count += 1
-        if 'price' in msg and 'type' in msg:
-            print ("Message type:", msg["type"],
-                   "\t@ {:.3f}".format(float(msg["price"])))
-    def on_close(self):
-        print("-- Goodbye! --")
-
-wsClient = myWebsocketClient()
-wsClient.start()
-print(wsClient.url, wsClient.products)
-while (wsClient.message_count < 500):
-    print ("\nmessage_count =", "{} \n".format(wsClient.message_count))
-    time.sleep(1)
-wsClient.close()
-
-# def main():
-
-# 	keys = []
-# 	for line in sys.stdin:
-# 		keys.append(line.strip())
-	
-# 	key = keys[0]
-# 	secret = keys[1]
-# 	passphrase = keys[2]
+import numpy as np
 
 
-# if __name__ == "__main__":
-# 	main()
+class Tick(object):
+    def __init__(self):
+        self.current = None
+        self.previous = None
+
+
+class WebSocketClient(object):
+    def __init__(self, request):
+        # self.url = url
+        self.request = request
+
+    def on_open(self, ws):
+        self.timeProcessed = {}
+        self.candlesticks = []
+        print("Websocket connection is opened")
+
+        ws.send(json.dumps(self.request))
+
+    def on_message(self, ws, message):
+        tick = Tick()
+
+        tick.current = json.loads(message)
+        tick.previous = tick.current
+        # print("===== Received tick ====")
+        # print("{} @ {}".format(tick.current["time"], tick.current["price"]))
+        tick_time = dateutil.parser.parse(tick.current["time"])
+        timestamp = tick_time.strftime("%m/%d/%Y %H:%M")
+
+        if timestamp not in self.timeProcessed:
+            # print("Starting new candlestick")
+            self.timeProcessed[timestamp] = True
+            if len(self.candlesticks) > 0:
+                self.candlesticks[-1]["close"] = tick.previous["price"]
+            self.candlesticks.append(
+                {
+                    "time": timestamp,
+                    "open": tick.current["price"],
+                    "high": tick.current["price"],
+                    "low": tick.current["price"],
+                }
+            )
+
+        if len(self.candlesticks) > 0:
+            next_tick = self.candlesticks[-1]
+
+            if tick.current["price"] > next_tick["high"]:
+                next_tick["high"] = tick.current["price"]
+
+            elif tick.current["price"] < next_tick["low"]:
+                next_tick["low"] = tick.current["price"]
+
+            # print("=== Candlesticks ===")
+            # for candle in self.candlesticks:
+            # print(candle)
+
+    def get_candlesticks(self):
+        return self.candlesticks
+
+    def start_feed(self, url):
+        self.ws = websocket.WebSocketApp(
+            url,
+            on_open=self.on_open,
+            on_message=self.on_message,
+            on_close=self.on_close,
+            on_error =self.on_error
+        )
+        self.ws.on_open = self.on_open
+        self.ws.on_close = self.on_close
+        # websocket.enableTrace(True)
+
+        try:
+            self.ws.run_forever()
+        except KeyboardInterrupt:
+            self.ws.close()
+
+
+    def on_error(self, ws, msg):
+        print("Websocket error:", msg)
+
+    def on_close(self, ws):
+        print("=== Websocket Connection is now closed! ===")
+
+def main():
+
+    socket = "wss://ws-feed-public.sandbox.pro.coinbase.com"
+
+    subscribeMessage = {
+        "type": "subscribe",
+        "channels": [{"name": "ticker", "product_ids": ["BTC-USD"]}],
+    }
+    client = WebSocketClient(subscribeMessage)
+
+    client.start_feed(socket)
+    # time.sleep(1)
+    np.savetxt("test.txt", client.get_candlesticks(), fmt="%s")
+
+
+if __name__ == "__main__":
+    main()
