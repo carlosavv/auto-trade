@@ -2,6 +2,7 @@ import sys
 import matplotlib.pyplot as plt
 plt.style.use("seaborn")
 import json
+from WSclient import WebSocketClient
 
 def processData(inputFile):
     data = []
@@ -23,8 +24,16 @@ def parseData(data):
     print(temp)
 def main():
     inputFile = sys.stdin
-    data = processData(inputFile)
-    parseData(data)
+    # data = processData(inputFile)
+    socket = "wss://ws-feed-public.sandbox.pro.coinbase.com"
+
+    subscribeMessage = {
+        "type": "subscribe",
+        "channels": [{"name": "ticker", "product_ids": ["BTC-USD"]}],
+    }
+    client = WebSocketClient(socket, subscribeMessage)
+
+    client.start_feed()
 
 if __name__ == "__main__":
     main()
