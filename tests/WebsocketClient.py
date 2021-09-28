@@ -17,6 +17,7 @@ class WebsocketFeed(object):
         self.timeProcessed = {}
         self.candlesticks = []
         self.request = request
+        self.timestamp = None
         self.ws = websocket.WebSocketApp(
             self.url, on_open=self.on_open, on_message=self.on_message
         )
@@ -43,16 +44,16 @@ class WebsocketFeed(object):
         tick.previous = tick.current
 
         tick_time = dateutil.parser.parse(tick.current["time"])
-        timestamp = tick_time.strftime("%m/%d/%Y %H:%M")
+        self.timestamp = tick_time.strftime("%m/%d/%Y %H:%M")
 
-        if timestamp not in self.timeProcessed:
+        if self.timestamp not in self.timeProcessed:
             # print("Starting new candlestick")
-            self.timeProcessed[timestamp] = True
+            self.timeProcessed[self.timestamp] = True
             if len(self.candlesticks) > 0:
                 self.candlesticks[-1]["close"] = tick.previous["price"]
             self.candlesticks.append(
                 {
-                    "time": timestamp,
+                    "time": self.timestamp,
                     "open": tick.current["price"],
                     "high": tick.current["price"],
                     "low": tick.current["price"],
@@ -70,6 +71,16 @@ class WebsocketFeed(object):
 
     def get_candlesticks(self):
         return self.candlesticks
+    
+    def get_closingPrice(self):
+
+        for dict in self.candlesticks:
+            if "close" in list(dict.keys()):
+
+                return dict["close"]
+        
+    def get_time(self):
+        return int(list(self.timeProcessed.keys())[-1][14:16])
 
     # def on_error(self, ws, msg):
     #     print("Websocket error:", msg)
