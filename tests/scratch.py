@@ -18,6 +18,8 @@ class Visualizer(object):
 
         self.time = time
         self.closingPrice = price
+        print(self.time)
+        print(self.closingPrice)
         self.app = dash.Dash(__name__)
 
         self.app.layout = html.Div(
@@ -60,15 +62,15 @@ class WebsocketFeed(object):
         self.timeProcessed = {}
         self.candlesticks = []
         self.request = request
-        self.timestamp = None
+        
         self.tickerTime = deque(maxlen=200)
         self.closingPrice = deque(maxlen=200)
+
+        self.vis = Visualizer(self.tickerTime, self.closingPrice)
 
         self.ws = websocket.WebSocketApp(
             self.url, on_open=self.on_open, on_message=self.on_message
         )
-
-        self.ws.run_forever()
 
     def on_open(self, ws):
         print("=== Websocket is now open! ===")
@@ -96,17 +98,10 @@ class WebsocketFeed(object):
             self.timeProcessed[self.timestamp] = True
             if len(self.candlesticks) > 0:
                 self.candlesticks[-1]["close"] = tick.previous["price"]
-                print(self.candlesticks)
-                # TODO: try to get the last close and time from the candlesticks array
+                self.closingPrice.append(float(self.candlesticks[-1]["close"]))
+                self.tickerTime.append(int(list(self.timeProcessed.keys())[-1][14:16]))
+                # vis = Visualizer(self.tickerTime, self.closingPrice)
 
-                # for dict in self.candlesticks:
-
-                #     self.closingPrice.append(dict["close"])
-                #     print(dict["close"])
-                #     self.tickerTime.append(
-                #         int(list(self.timeProcessed.keys())[-1][14:16])
-                #     )
-                #     print(int(list(self.timeProcessed.keys())[0][14:16]))
 
             self.candlesticks.append(
                 {
@@ -126,8 +121,8 @@ class WebsocketFeed(object):
             elif tick.current["price"] < next_tick["low"]:
                 next_tick["low"] = tick.current["price"]
 
-        # vis = Visualizer(self.update_time(), self.update_price())
         # vis.app.run_server(debug=True)
+
 
     def get_candlesticks(self):
         return self.candlesticks
@@ -159,6 +154,9 @@ subscribeMessage = {
 }
 
 stream = WebsocketFeed(socket, subscribeMessage)
+
+stream.vis.app.run_server(debug = True)
+stream.ws.run_forever()
 print("")
 
 
