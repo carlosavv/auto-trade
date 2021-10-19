@@ -11,6 +11,12 @@ import json
 import dateutil.parser
 import time
 import _thread
+import threading
+
+import logging
+
+log = logging.getLogger("werkzeug")
+log.setLevel(logging.ERROR)
 
 
 class Visualizer(object):
@@ -25,7 +31,7 @@ class Visualizer(object):
         self.app.layout = html.Div(
             [
                 dcc.Graph(id="live-graph", animate=True),
-                dcc.Interval(id="graph-update", interval=1000, n_intervals=0),
+                dcc.Interval(id="graph-update", interval=60000, n_intervals=0),
             ]
         )
         self.app.callback(
@@ -62,7 +68,7 @@ class WebsocketFeed(object):
         self.timeProcessed = {}
         self.candlesticks = []
         self.request = request
-        
+
         self.tickerTime = deque(maxlen=200)
         self.closingPrice = deque(maxlen=200)
 
@@ -71,6 +77,9 @@ class WebsocketFeed(object):
         self.ws = websocket.WebSocketApp(
             self.url, on_open=self.on_open, on_message=self.on_message
         )
+        wst = threading.Thread(target=self.ws.run_forever)
+
+        wst.start()
 
     def on_open(self, ws):
         print("=== Websocket is now open! ===")
@@ -80,7 +89,7 @@ class WebsocketFeed(object):
             # while True:
             time.sleep(1)
             # self.ws.send("Hello %d" % count)
-            self.ws.send(json.dumps(self.request))
+            ws.send(json.dumps(self.request))
             # count += 1
 
         _thread.start_new_thread(run, ())
@@ -102,7 +111,6 @@ class WebsocketFeed(object):
                 self.tickerTime.append(int(list(self.timeProcessed.keys())[-1][14:16]))
                 # vis = Visualizer(self.tickerTime, self.closingPrice)
 
-
             self.candlesticks.append(
                 {
                     "time": self.timestamp,
@@ -123,7 +131,6 @@ class WebsocketFeed(object):
 
         # vis.app.run_server(debug=True)
 
-
     def get_candlesticks(self):
         return self.candlesticks
 
@@ -141,9 +148,10 @@ class WebsocketFeed(object):
         self.tickerTime.append(self.get_time())
         return self.tickerTime
 
-    def update_price(self):
-        self.closingPrice.append(self.get_closingPrice())
-        return self.closingPrice
+    def get_closingPrice(self):
+        if len(self.candlesticks) > 0:
+
+            return float(self.candlesticks[-1]["close"])
 
 
 socket = "wss://ws-feed.pro.coinbase.com"
@@ -154,10 +162,17 @@ subscribeMessage = {
 }
 
 stream = WebsocketFeed(socket, subscribeMessage)
+test_vis = threading.Thread(target=stream.vis.app.run_server)
+test_vis.start()
+# i = 0
+while True:
+    # i += 1
+    # stream.vis.app.run_server(debug=True)
+    # print(i)
 
-stream.vis.app.run_server(debug = True)
-stream.ws.run_forever()
-print("")
+    if len(stream.closingPrice) > 0:
+        print(stream.closingPrice[-1])
+    time.sleep(60)
 
 
 # if __name__ == "__main__":

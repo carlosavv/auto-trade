@@ -71,14 +71,14 @@ class WebsocketFeed(object):
 
     def get_candlesticks(self):
         return self.candlesticks
-    
+
     def get_closingPrice(self):
 
         for dict in self.candlesticks:
             if "close" in list(dict.keys()):
 
                 return dict["close"]
-        
+
     def get_time(self):
         return int(list(self.timeProcessed.keys())[-1][14:16])
 
